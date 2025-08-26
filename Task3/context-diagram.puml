@@ -1,0 +1,47 @@
+@startuml Standart Context Diagram 
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Standart Context Diagram
+
+Person(new_customer, "Новый клиент", "Просматривает депозиты и оставляет заявку через сайт банка")
+Person(client, "Клиент аутентифицированный", "Просматривает персонализированные предложения и открывает депозит через интернет-банк")
+Person(manager_call_center, "Менеджер кол-центра", "Обрабатывает заявки с сайта, звонит клиентам, предлагает особые условия")
+Person(manager_back, "Менеджер бэк-офиса", "Подтверждает и открывает депозиты в АБС, управляет продуктами")
+
+System(site, "Сайт банка", "Веб-сайт на PHP + React.js, предоставляет информацию о депозитах и приём заявок")
+System(online_bank, "Интернет-банк", "ASP.NET MVC 4.5, предоставляет доступ к банковским услугам для существующих клиентов")
+System(call_center, "Система кол-центра", "Java Spring Boot + PostgreSQL, CRM для обработки заявок")
+System(abs, "АБС", "Delphi + Oracle, ядро банковской системы")
+System(sms_gateway, "СМС-шлюз", "Шлюз для отправки СМС-сообщений")
+System(telecom, "Телеком-оператор", "Внешний оператор связи")
+
+System_Boundary(deposit_system, "Система открытия депозитов") {
+    System(catalog_service, "Сервис каталога депозитов", ".NET Core, предоставляет актуальные и персонализированные ставки")
+    System(application_service, "Сервис обработки заявок", ".NET Core, обрабатывает заявки из всех каналов")
+    System(notification_service, "Сервис уведомлений", ".NET Core, отправляет СМС-уведомления")
+    System(broker, "Брокер сообщений", "Kafka, обеспечивает асинхронную коммуникацию")
+}
+
+Rel(new_customer, site, "Просматривает депозиты, оставляет заявку (ФИО, телефон)")
+Rel(client, online_bank, "Просматривает предложения, открывает депозит")
+Rel(manager_call_center, call_center, "Просматривает заявки, предлагает условия")
+Rel(manager_back, abs, "Подтверждает заявки, открывает депозиты, управляет продуктами")
+
+Rel(site, catalog_service, "GET /api/deposits (HTTPS)", "JSON")
+Rel(site, application_service, "POST /api/applications (HTTPS)", "JSON")
+Rel(online_bank, catalog_service, "GET /api/deposits (HTTPS)", "JSON")
+Rel(online_bank, application_service, "POST /api/applications (HTTPS)", "JSON")
+
+Rel(application_service, broker, "Публикует события о новых заявках")
+Rel(broker, call_center, "Доставляет события о заявках с сайта")
+Rel(broker, abs, "Доставляет события о заявках из интернет-банка")
+Rel(abs, broker, "Публикует события об изменении продуктов и статусов заявок")
+
+Rel(catalog_service, abs, "Периодически синхронизирует данные о продуктах", "HTTPS/Kafka")
+Rel(notification_service, sms_gateway, "Отправка СМС-сообщений", "API")
+Rel(sms_gateway, telecom, "Передача СМС для доставки")
+
+Rel(call_center, broker, "Публикует события об особых условиях")
+Rel(broker, notification_service, "Доставляет события для отправки СМС")
+
+@enduml

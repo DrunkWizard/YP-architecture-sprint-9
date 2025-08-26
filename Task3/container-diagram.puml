@@ -1,0 +1,57 @@
+@startuml Standart Container Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Standart Container Diagram
+
+Person(client_site, "Клиент (новый)", "Просматривает депозиты и оставляет заявку через сайт банка")
+Person(client_ib, "Клиент (существующий)", "Просматривает персонализированные предложения и открывает депозит через интернет-банк")
+Person(manager_cc, "Менеджер кол-центра", "Обрабатывает заявки с сайта, звонит клиентам, предлагает особые условия")
+Person(manager_bo, "Менеджер бэк-офиса", "Подтверждает и открывает депозиты в АБС, управляет продуктами")
+
+System_Boundary(deposit_system, "Система открытия депозитов") {
+    
+    System_Ext(site, "Сайт банка", "PHP + React.js", "Предоставляет информацию о депозитах")
+    System_Ext(online_bank, "Интернет-банк", "ASP.NET MVC 4.5 + MS SQL", "Банковские услуги для клиентов")
+    System_Ext(call_center, "Система кол-центра", "Java Spring Boot + PostgreSQL", "CRM для обработки заявок")
+    System_Ext(abs, "АБС", "Delphi клиент + Oracle БД", "Ядро банковской системы")
+    System_Ext(sms_gateway, "СМС-шлюз", "Внутренний шлюз", "Отправка СМС-сообщений")
+    
+    Container(catalog_service, "Сервис каталога", ".NET Core", "Предоставляет актуальные и персонализированные ставки")
+    Container(application_service, "Сервис обработки заявок", ".NET Core", "Обрабатывает заявки из всех каналов")
+    Container(notification_service, "Сервис уведомлений", ".NET Core", "Отправляет СМС-уведомления")
+    ContainerDb(catalog_db, "База каталога", "MS SQL", "Хранит кэш продуктов депозитов")
+    ContainerDb(application_db, "База заявок", "MS SQL", "Хранит статусы заявок")
+
+    Container(message_broker, "Брокер сообщений", "Kafka", "Асинхронная коммуникация между системами")
+}
+
+System_Ext(telecom, "Телеком-оператор", "Внешний оператор связи")
+
+Rel(client_site, site, "Просматривает депозиты, оставляет заявку (ФИО, телефон)", "HTTPS")
+Rel(client_ib, online_bank, "Просматривает предложения, открывает депозит", "HTTPS")
+Rel(manager_cc, call_center, "Просматривает заявки, предлагает условия", "HTTPS")
+Rel(manager_bo, abs, "Подтверждает заявки, открывает депозиты", "Desktop client")
+
+Rel(site, catalog_service, "GET /api/deposits", "HTTPS/JSON")
+Rel(site, application_service, "POST /api/applications", "HTTPS/JSON")
+Rel(online_bank, catalog_service, "GET /api/deposits", "HTTPS/JSON")
+Rel(online_bank, application_service, "POST /api/applications", "HTTPS/JSON")
+
+Rel(catalog_service, catalog_db, "Чтение/запись", "ADO.NET")
+Rel(application_service, application_db, "Чтение/запись", "ADO.NET")
+
+Rel(application_service, message_broker, "Публикует события о новых заявках", "AMQP")
+Rel(message_broker, call_center, "Доставляет события о заявках с сайта", "AMQP")
+Rel(message_broker, abs, "Доставляет события о заявках из интернет-банка", "AMQP")
+Rel(abs, message_broker, "Публикует события об изменении продуктов", "AMQP")
+Rel(call_center, message_broker, "Публикует события об особых условиях", "AMQP")
+
+Rel(catalog_service, abs, "Синхронизация данных о продуктах", "HTTPS/AMQP")
+Rel(notification_service, sms_gateway, "Отправка СМС-сообщений", "API")
+Rel(sms_gateway, telecom, "Передача СМС для доставки", "Протокол оператора")
+
+Rel(message_broker, notification_service, "Доставляет события для отправки СМС", "AMQP")
+
+Rel(application_service, notification_service, "Запрос на отправку СМС подтверждения", "HTTP")
+
+@enduml
