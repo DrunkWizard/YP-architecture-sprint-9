@@ -1,0 +1,28 @@
+@startuml Standart Context Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Standart Context Diagram
+
+Person(operator, "Оператор кол-центра банка", "Консультирует клиентов по телефону")
+Person(operator_partner, "Оператор партнерского кол-центра", "Консультирует клиентов по телефону")
+
+System(bank_cc_system, "Система кол-центра банка")
+System(partner_cc_system, "Система партнерского кол-центра")
+
+System_Boundary(bank_systems, "Системы банка") {
+    System(catalog_service, "Сервис каталога депозитов", ".NET Core")
+    System(email_service, "Email сервис", "Сервис отправки email")
+}
+
+System_Ext(email_provider, "Email провайдер", "Внешний email сервис")
+
+' Connections
+Rel(operator, bank_cc_system, "Просматривает заявки и консультирует клиентов")
+Rel(operator_partner, partner_cc_system, "Работает с локальной системой")
+
+Rel(bank_cc_system, catalog_service, "GET /api/deposits", "HTTPS/JSON")
+Rel(catalog_service, email_service, "Отправка файлов с ставками", "API")
+Rel(email_service, email_provider, "Отправка email", "SMTP")
+Rel(email_provider, partner_cc_system, "Доставка email", "Email")
+
+@enduml

@@ -1,0 +1,39 @@
+@startuml Standart Container Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Standart Container Diagram
+
+Person(operator, "Оператор колл-центра банка", "Консультирует клиентов по телефону")
+Person(operator_partner, "Оператор партнерского кол-центра", "Консультирует клиентов по телефону")
+
+System_Boundary(bank_systems, "Системы банка") {
+    Container(catalog_service, "Сервис каталога", ".NET Core", "Предоставляет актуальные ставки")
+    ContainerDb(catalog_db, "База каталога", "MS SQL", "Хранит кэш продуктов депозитов")
+    Container(email_service, "Email сервис", ".NET Core", "Отправка email с файлами")
+    Container(file_generator, "Генератор файлов", ".NET Core", "Создание файлов для партнеров")
+}
+
+System_Boundary(bank_cc, "Колл-центр банка") {
+    Container(cc_system, "Система колл-центра", "Java Spring Boot", "Интерфейс для менеджеров")
+    ContainerDb(cc_db, "База CRM", "PostgreSQL", "Хранит данные колл-центра")
+}
+
+System_Boundary(partner_cc, "Партнерский кол-центр") {
+    Container(partner_system, "Локальная система", "Внешняя cистема колл-центра", "Система партнерского колл-центра")
+    Container(email_client, "Email клиент", "Почтовый клиент", "Получение email")
+}
+
+' Connections
+Rel(operator, cc_system, "Работает с интерфейсом", "HTTPS")
+Rel(operator_partner, partner_system, "Работает с системой", "Локальный клиент")
+
+Rel(cc_system, catalog_service, "GET /api/deposits", "HTTPS/JSON")
+Rel(catalog_service, catalog_db, "Чтение данных", "ADO.NET")
+
+Rel(catalog_service, file_generator, "События об изменениях", "HTTP")
+Rel(file_generator, email_service, "Передача файлов для отправки", "HTTP")
+Rel(email_service, email_client, "Отправка email с вложением", "SMTP")
+Rel(email_client, partner_system, "Ручная загрузка файлов", "Manual")
+
+
+@enduml
